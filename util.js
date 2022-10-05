@@ -1,6 +1,6 @@
 const path = require('path')
 const { promisify } = require('util')
-const { StorageSlot, NULL_ADDRESS } = require('./constants')
+const { NULL_ADDRESS } = require('./constants')
 
 const abort = (message, logger = console, code = 1) => {
   logger.error(message)
@@ -98,44 +98,6 @@ const getNetwork = async (config, logger) => {
 }
 
 /**
- * Check whether the address is an EIP1967 proxy and if so, return its implementation
- * address. Note that only the LOGIC variety of EIP1967 is supported, not the BEACON
- * variety. If support for BEACON proxies is added to the openzeppelin plugin,
- * I will add it here as well
- * @param {any | undefined} provider a provider or undefined
- * @param {string} address the address of a potential proxy contract
- * @param {any} logger
- * @returns {Promise<string | undefined>} address of the implementation or undefined if its not a proxy
- */
-const getImplementationAddress = async (provider, address, logger) => {
-  const send = getRpcSendFunction(provider)
-
-  if (!send) {
-    logger.debug('No (valid) provider configured, assuming no proxy')
-    return undefined
-  }
-
-  try {
-    const { result } = await send({
-      jsonrpc: '2.0',
-      id: Date.now(),
-      method: 'eth_getStorageAt',
-      params: [address, StorageSlot.LOGIC, 'latest']
-    })
-
-    const implementationAddress = getAddressFromStorage(result)
-
-    if (typeof result === 'string' && implementationAddress !== NULL_ADDRESS) {
-      return implementationAddress
-    }
-  } catch {
-    // ignored
-  }
-
-  return undefined
-}
-
-/**
  * Get a promisified RPC Send function from a provider
  * @param {any | undefined} provider a provider or undefined
  * @returns {any | undefined} a promisified RPC send function
@@ -152,60 +114,11 @@ const deepCopy = (obj) => JSON.parse(JSON.stringify(obj))
 
 const getAddressFromStorage = (storage) => `0x${storage.slice(2).slice(-40).padStart(40, '0')}`
 
-const getApiKey = (config, apiUrl, logger) => {
-  const networkConfig = config.networks[config.network]
-  if (networkConfig && networkConfig.verify && networkConfig.verify.apiKey) {
-    return networkConfig.verify.apiKey
-  }
-
-  enforce(config.api_keys, 'No API Keys provided', logger)
-
-  if (apiUrl.includes('bscscan')) return getApiKeyForPlatform(config, 'BscScan', logger)
-  if (apiUrl.includes('snowtrace')) return getApiKeyForPlatform(config, 'Snowtrace', logger)
-  if (apiUrl.includes('polygonscan')) return getApiKeyForPlatform(config, 'PolygonScan', logger)
-  if (apiUrl.includes('ftmscan')) return getApiKeyForPlatform(config, 'FtmScan', logger)
-  if (apiUrl.includes('hecoinfo')) return getApiKeyForPlatform(config, 'HecoInfo', logger)
-  if (apiUrl.includes('moonscan')) return getApiKeyForPlatform(config, 'Moonscan', logger)
-  if (apiUrl.includes('optimistic')) return getApiKeyForPlatform(config, 'Optimistic Etherscan', logger)
-  if (apiUrl.includes('arbiscan')) return getApiKeyForPlatform(config, 'Arbiscan', logger)
-  if (apiUrl.includes('bttcscan')) return getApiKeyForPlatform(config, 'BTTCScan', logger)
-  if (apiUrl.includes('aurorascan')) return getApiKeyForPlatform(config, 'Aurorascan', logger)
-  if (apiUrl.includes('cronoscan')) return getApiKeyForPlatform(config, 'Cronoscan', logger)
-  if (apiUrl.includes('gnosisscan')) return getApiKeyForPlatform(config, 'Gnosisscan', logger)
-
-  return getApiKeyForPlatform(config, 'Etherscan', logger)
-}
-
-const getApiKeyForPlatform = (config, platform, logger) => {
-  const mapping = {
-    Etherscan: config.api_keys.etherscan,
-    'Optimistic Etherscan': config.api_keys.optimistic_etherscan,
-    Arbiscan: config.api_keys.arbiscan,
-    BscScan: config.api_keys.bscscan,
-    Snowtrace: config.api_keys.snowtrace,
-    PolygonScan: config.api_keys.polygonscan,
-    FtmScan: config.api_keys.ftmscan,
-    HecoInfo: config.api_keys.hecoinfo,
-    Moonscan: config.api_keys.moonscan,
-    BTTCScan: config.api_keys.bttcscan,
-    Aurorascan: config.api_keys.aurorascan,
-    Cronoscan: config.api_keys.cronoscan,
-    Gnosisscan: config.api_keys.gnosisscan
-  }
-
-  const apiKey = mapping[platform]
-  enforce(apiKey, `No ${platform} API Key provided`, logger)
-
-  return apiKey
-}
-
 module.exports = {
   abort,
   enforce,
   enforceOrThrow,
   normaliseContractPath,
   getNetwork,
-  getImplementationAddress,
-  deepCopy,
-  getApiKey
+  deepCopy
 }
