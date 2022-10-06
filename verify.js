@@ -36,9 +36,11 @@ module.exports = async (config) => {
         `No instance of contract ${artifact.contractName} found for network id ${options.networkId}`
       )
 
-      let status = await verifyContract(artifact, options)
+      let response = await sendVerifyRequest(artifact, options)
+      
+      logResponse(response, contractName)
 
-      if (status.status !== 200) {
+      if (response.status !== 200) {
         failedContracts.push(`${contractNameAddressPair}`)
       }
     } catch (error) {
@@ -57,10 +59,27 @@ module.exports = async (config) => {
   logger.info(`Successfully verified ${contractNameAddressPairs.length} contract(s).`)
 }
 
+const logResponse = (response, contractName) => {
+  try {
+    const result = response.data.result
+    result.forEach(contract => {
+      if (contract.storageTimestamp) {
+        logger.info(` Contract ${contractName} is already verified, verification date: ${contract.storageTimestamp}`)
+      } else {
+        logger.info(` Contract ${contractName} verified succesfully`)
+      }
+      logger.info(`   ${contract.address}: ${contract.status}_match`)
+      logger.info(`   Sourcify url: https://sourcify.dev/#/lookup/${contract.address}`)
+    })
+  } catch(e) {
+    throw new Error(`${JSON.stringify(response.data)}`)
+  }
+}
+
 const parseConfig = async (config) => {
   const provider = config.provider
   const networkConfig = config.networks && config.networks[config.network]
-  const { chainId } = await getNetwork(config, logger)
+  const { chainId, networkId } = await getNetwork(config, logger)
 
   let apiUrl = API_URL
 
@@ -73,6 +92,7 @@ const parseConfig = async (config) => {
   return {
     apiUrl,
     chainId,
+    networkId,
     provider,
     projectDir,
     contractsBuildDir,
@@ -90,36 +110,29 @@ const getArtifact = (contractName, options) => {
   return JSON.parse(JSON.stringify(require(artifactPath)))
 }
 
-const verifyContract = async (artifact, options) => {
-  const res = await sendVerifyRequest(artifact, options)
-  enforceOrThrow(res.data, `Failed to connect to Etherscan API at url ${options.apiUrl}`)
-
-  /* if (res.data.result === VerificationStatus.ALREADY_VERIFIED) {
-    return VerificationStatus.ALREADY_VERIFIED
-  } */
-
-  enforceOrThrow(res.status === 200, res.data.result)
-  return res
-}
-
 const sendVerifyRequest = async (artifact, options) => {
   const compilerVersion = extractCompilerVersion(artifact)
   const metadata = artifact.metadata
   const inputJSON = getInputJSON(artifact, options)
 
+  const files = {}
+  Object.keys(inputJSON.sources).forEach(path => {
+    files[path.replace(/^.*[\\\/]/, '')] = inputJSON.sources[path].content
+  })
+  files['metadata.json'] = JSON.stringify(JSON.parse(metadata))
+
   const postQueries = {
     "address": artifact.networks[`${options.networkId}`].address,
-    "chain": options.chainId,
-    "files": inputJSON.sources
+    "chain": `${options.chainId}`,
+    "files": files
   }
 
+  logger.debug('Sending verify request with POST arguments:')
+  logger.debug(JSON.stringify(postQueries, null, 2))
   try {
-    logger.debug('Sending verify request with POST arguments:')
-    logger.debug(JSON.stringify(postQueries, null, 2))
-    return await axios.post(options.apiUrl, querystring.stringify(postQueries))
-  } catch (error) {
-    logger.debug(error.message)
-    throw new Error(`Failed to connect to Etherscan API at url ${options.apiUrl}`)
+    return await axios.post(options.apiUrl, postQueries)
+  } catch(error) {
+    throw new Error(error.response.data.message)
   }
 }
 
