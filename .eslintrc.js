@@ -2,8 +2,11 @@ module.exports = {
   env: {
     mocha: true
   },
-  extends: 'standard',
+  extends: 'prettier',
   rules: {
     'no-console': 'off'
-  }
+  },
+  parserOptions: {
+    ecmaVersion: 2020
+  },
 }

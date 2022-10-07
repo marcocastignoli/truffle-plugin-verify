@@ -1,6 +1,5 @@
 {
     "commands": {
-        "verify": "verify.js",
-        "etherscan": "verify.js"
+        "sourcify": "verify.js"
     }
 }

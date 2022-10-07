@@ -1,10 +1,7 @@
 const axios = require('axios')
-const tunnel = require('tunnel')
 const cliLogger = require('cli-logger')
-const delay = require('delay')
 const fs = require('fs')
 const path = require('path')
-const querystring = require('querystring')
 const { API_URL } = require('./constants')
 const { enforce, enforceOrThrow, normaliseContractPath, getNetwork } = require('./util')
 const { version } = require('./package.json')
@@ -15,7 +12,7 @@ module.exports = async (config) => {
   // Set debug logging
   if (config.debug) logger.level('debug')
   logger.debug('DEBUG logging is turned ON')
-  logger.debug(`Running truffle-plugin-verify v${version}`)
+  logger.debug(`Running truffle-plugin-sourcify v${version}`)
 
   const options = await parseConfig(config)
 
@@ -37,7 +34,7 @@ module.exports = async (config) => {
       )
 
       let response = await sendVerifyRequest(artifact, options)
-      
+
       logResponse(response, contractName)
 
       if (response.status !== 200) {
@@ -71,7 +68,7 @@ const logResponse = (response, contractName) => {
       logger.info(`   ${contract.address}: ${contract.status}_match`)
       logger.info(`   Sourcify url: https://sourcify.dev/#/lookup/${contract.address}`)
     })
-  } catch(e) {
+  } catch (e) {
     throw new Error(`${JSON.stringify(response.data)}`)
   }
 }
@@ -131,7 +128,7 @@ const sendVerifyRequest = async (artifact, options) => {
   logger.debug(JSON.stringify(postQueries, null, 2))
   try {
     return await axios.post(options.apiUrl, postQueries)
-  } catch(error) {
+  } catch (error) {
     throw new Error(error.response.data.message)
   }
 }

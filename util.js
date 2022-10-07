@@ -24,7 +24,7 @@ const enforceOrThrow = (condition, message) => {
  * not make any changes on platforms that aren't Windows.
  *
  * @param {string} contractPath path to a contract file in any format.
- * @param {any} options Options object containing the parsed truffle-plugin-verify options
+ * @param {any} options Options object containing the parsed truffle-plugin-sourcify options
  * @returns {string} path to the contract in Windows format when on Windows, or Unix format otherwise.
  */
 const normaliseContractPath = (contractPath, options) => {
@@ -45,7 +45,7 @@ const normaliseContractPath = (contractPath, options) => {
 
 /**
  * @param {string} contractPath path to a contract file in any format.
- * @param {any} options Options object containing the parsed truffle-plugin-verify options
+ * @param {any} options Options object containing the parsed truffle-plugin-sourcify options
  * @returns {string} absolute path to the contract source file
  */
 const getAbsolutePath = (contractPath, options) => {
